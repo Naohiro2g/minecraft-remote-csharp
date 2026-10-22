@@ -11,3 +11,14 @@ handoff-materials/
 .env
 .env.*
 !.env.example
+
+# .NET build and test output
+**/bin/
+**/obj/
+TestResults/
+
+# IDE-local state
+.vs/
+.idea/
+*.user
+*.suo

@@ -1,0 +1,23 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: jdx/mise-action@8418fedb1110381a0d3ba51a7a415d7c1b884550 # v5.2.2
+      - name: Restore
+        run: mise exec -- dotnet restore MinecraftRemote.Client.sln
+      - name: Build
+        run: mise exec -- dotnet build MinecraftRemote.Client.sln --configuration Release --no-restore
+      - name: Test
+        run: mise exec -- dotnet test MinecraftRemote.Client.sln --configuration Release --no-build
