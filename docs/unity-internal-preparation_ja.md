@@ -26,6 +26,14 @@ Unity内のC#スクリプトでブロックを配置するデモは作れます�
 
 後へ残すのは、assetや内部部品に加え、体験上の判断とその理由です。共通化の成果をつなぐ際に内部コードの調整が必要になっても、これらの観察を設計の入力として使えます。
 
+### 1.2 創造性を引き出す入口を早く試す
+
+Unity箱庭には、人の創造性を引き出す新しい柱として、MinecraftとScratchを結ぶ探究への導入と表現の拡張を担う期待があります。先行作業は、その入口を早く形にする開発として進めます。
+
+数えやすさや操作感に加え、配置や材質を少し変えたときに「別の形や見せ方も試したい」と思えるかも観察します。機能の種類を増やす前から、小さな建築場面を変えて比べる試作で確かめられます。自由に変える余地と、次に試すことを見つけやすい足場の両方を調べます。
+
+ブロック建築は最初の表現題材です。3Dモデルへのスクリプティングやリモコン操作は、その先の探究候補として記録します。共通Protocolの拡張や最初の対応APIは、連携の契約を扱う段階で検討します。
+
 ## 2. ロードマップとの関係
 
 | Phase | 担うこと | Unityの先行作業との関係 |
@@ -38,6 +46,8 @@ Unity内のC#スクリプトでブロックを配置するデモは作れます�
 | I | 一般用途C# Client LibraryとUnityへの展開 | 共通化の入力を使う連携部分は、この進行に合わせる |
 
 D/E/Fを進め、G/H/Iを並行に近い形で始める可能性は検討中です。この文書では順序を改訂せず、全てのPhaseを独自に直列完了待ちにする条件も追加しません。連携へ進むとき、対象機能に必要な共通contract・型・fixture・検証方法と、合意した着手範囲を確認します。
+
+当面は開発計画の大枠を保ち、共通基盤の整備と、通信なしのUnity内部の試作を並行して進めます。Unity側では最終の体験品質に必要なことを早く確かめ、両方向で得た成果を連携へ使います。これは現時点で選んだ進め方で、得られた観察をもとに優先順や範囲を見直します。
 
 世界定数のhello配送とHUDのstream選択も共通の計画に従います。先行シーンでは値をローカルに与えて表示を調べ、同じ機能の独自APIを作りません。
 
@@ -150,8 +160,11 @@ D/E/Fを進め、G/H/Iを並行に近い形で始める可能性は検討中で�
 
 参照したknowledge commit: `c3381ba1542a463870ade7f03d67e9e5e2947acd`。共通化と各言語の着手範囲の正本は、多言語ロードマップです。
 
+人の創造性を引き出す最上位のミッションと、Unityを新しい柱にするビジョンは、human ownerから示された、言葉を磨いている構想です。knowledgeへの着地は未実施です。
+
 - [多言語ロードマップ §13〜19・§21〜25](https://github.com/Naohiro2g/mc-remote-knowledge/blob/c3381ba1542a463870ade7f03d67e9e5e2947acd/10-protocol/polyglot-client-roadmap_ja.md)
 - [C# Client Libraryの境界](https://github.com/Naohiro2g/mc-remote-knowledge/blob/c3381ba1542a463870ade7f03d67e9e5e2947acd/18-csharp-client/README_ja.md)
+- [既存の学習支援方針・創造性を支える制約](https://github.com/Naohiro2g/mc-remote-knowledge/blob/c3381ba1542a463870ade7f03d67e9e5e2947acd/20-%E6%95%99%E6%9D%90/ai-learning-design_ja.md)
 - [Unity箱庭の全体設計](unity-shared-sandbox-draft_ja.md)
 - [UnityのGPU instancing](https://docs.unity.com/en-us/engine/6000.3/manual/analysis/graphics-performance-profiling/reduce-draw-calls/gpuinstancing/gpuinstancing)
 - [Unity Webの性能上の考慮点](https://docs.unity.com/en-us/engine/6000.3/manual/platform-specific/webgl/develop/performance)

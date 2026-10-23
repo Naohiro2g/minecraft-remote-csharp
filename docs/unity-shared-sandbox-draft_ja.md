@@ -12,6 +12,16 @@ Unityは世界を表示し、歩く・見回す操作と座標表示を提供す
 
 学習者が変更するのは、まず外部のコードやScratchのブロックです。Unityの制作そのものや複数Unityアプリの連携は発展の選択肢とします。Web版を、公開箱庭の初回導入を容易にする入口として検討します。
 
+### 1.1 ミッションとビジョン
+
+最上位のミッションは、人の創造性を引き出すことです。コーディングで学ぶ過程でも、その結果として生まれる作品でも、自分の発想を試し、表現できる場を目指します。観察・言語化・検証と技法の習得は、その探究を支えます。
+
+Unity箱庭を、MinecraftとScratchを結ぶ探究への入り口と、それぞれの表現を広げる新しい柱として早く形にしたいと考えています。共通化の成果を連携へ使う方針に沿って、表示・操作・表現の体験を先に試します。
+
+当面の進め方は、開発計画の大枠を保ち、共通基盤の整備と、通信に依存しないUnity内部の試作を並行する形です。両方向の成果と発見を持ち寄り、接続部分で合流します。
+
+ブロック建築を入口に、3Dモデルへのスクリプティングや外部からのリモコン操作など、3D空間での表現へ広げることにも関心があります。これは将来の探究候補で、具体的な対応操作は小さな試作を通じて検討します。
+
 ## 2. 設計条件
 
 | 項目 | 内容 |
@@ -365,10 +375,13 @@ launcherは必要なプロセスを起動し、用意ができたローカルURL
 
 区画の辺や外周、地面保護の具体値、.NET hostなど、未確定の構成は設計案として扱います。
 
+人の創造性を引き出すという最上位のミッションと、Unityを新しい柱として育て、3D空間の表現へも広げるビジョンは、human ownerから示されたものです。言語化を継続しており、knowledgeへの着地は未実施です。
+
 実際に読んだknowledge commit: `c3381ba1542a463870ade7f03d67e9e5e2947acd`。
 
 - [C# Client Libraryの境界](https://github.com/Naohiro2g/mc-remote-knowledge/blob/c3381ba1542a463870ade7f03d67e9e5e2947acd/18-csharp-client/README_ja.md)
 - [多言語Client Libraryロードマップ](https://github.com/Naohiro2g/mc-remote-knowledge/blob/c3381ba1542a463870ade7f03d67e9e5e2947acd/10-protocol/polyglot-client-roadmap_ja.md)
+- [既存の学習支援方針・創造性を支える制約](https://github.com/Naohiro2g/mc-remote-knowledge/blob/c3381ba1542a463870ade7f03d67e9e5e2947acd/20-%E6%95%99%E6%9D%90/ai-learning-design_ja.md)
 - [wire形式・座標・block値](https://github.com/Naohiro2g/mc-remote-knowledge/blob/c3381ba1542a463870ade7f03d67e9e5e2947acd/10-protocol/wire-format-design_ja.md)
 - [block値と状態](https://github.com/Naohiro2g/mc-remote-knowledge/blob/c3381ba1542a463870ade7f03d67e9e5e2947acd/10-protocol/block-value-design_ja.md)
 - [世界定数の意味](https://github.com/Naohiro2g/mc-remote-knowledge/blob/c3381ba1542a463870ade7f03d67e9e5e2947acd/00-hub/world-constants-facts_ja.md)
