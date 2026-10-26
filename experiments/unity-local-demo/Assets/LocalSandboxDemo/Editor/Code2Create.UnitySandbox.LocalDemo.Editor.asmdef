@@ -1,0 +1,6 @@
+{
+  "name": "Code2Create.UnitySandbox.LocalDemo.Editor",
+  "rootNamespace": "Code2Create.UnitySandbox.LocalDemo",
+  "references": ["Code2Create.UnitySandbox.LocalDemo"],
+  "includePlatforms": ["Editor"]
+}

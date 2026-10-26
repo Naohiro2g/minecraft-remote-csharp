@@ -1,6 +1,8 @@
 # Unity内部で先に進める作業
 
-更新日: 2026-10-23。公開共有箱庭の[全体設計](unity-shared-sandbox-draft_ja.md)から、共通ProtocolやClient Libraryの実装を先取りしない作業を切り出します。
+更新日: 2026-10-26。公開共有箱庭の[全体設計](unity-shared-sandbox-draft_ja.md)から、共通ProtocolやClient Libraryの実装を先取りしない作業を切り出します。
+
+通信なしの最初の試作を[experiments/unity-local-demo](../experiments/unity-local-demo/README_ja.md)に置きました。6材質、列・柱・壁・階段、地面と区画ガイド、歩行・照準・ローカル座標表示を用意しています。座標と配置更新の自動検証、材質比較の描画確認まで行い、人による操作感の観察とWebへの書き出しはこれからです。
 
 ## 1. 先行作業の目的
 
@@ -170,4 +172,4 @@ D/E/Fを進め、G/H/Iを並行に近い形で始める可能性は検討中で�
 - [Unity Webの性能上の考慮点](https://docs.unity.com/en-us/engine/6000.3/manual/platform-specific/webgl/develop/performance)
 - [Unity Webのbuild設定](https://docs.unity.com/en-us/engine/6000.3/manual/platform-specific/webgl/building-distribution/web-build-settings)
 
-この文書は作業範囲の抽出です。Unity Projectの新規作成や、ここに挙げたasset・scene・Web buildの実装/実行はまだ行っていません。
+先行試作のソースと準備手順は上記フォルダーに置きます。Unity Projectの生成先は無視対象のローカル領域です。正式なUnity用repo/packageの配置、Web build、通信との連携は未決・未実施です。
