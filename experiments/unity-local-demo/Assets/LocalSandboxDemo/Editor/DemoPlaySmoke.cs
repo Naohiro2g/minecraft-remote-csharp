@@ -28,7 +28,9 @@ namespace Code2Create.UnitySandbox.LocalDemo
             startedAt = EditorApplication.timeSinceStartup;
             Application.logMessageReceived += OnLog;
             EditorApplication.update += Tick;
-            EditorApplication.EnterPlaymode();
+            // 起動時の検索索引など、Editorの初期化コールバックが終わってからPlayへ入る。
+            // executeMethodの中で直ちに切り替えると、索引作成前にPlay移行中になり得る。
+            EditorApplication.delayCall += EditorApplication.EnterPlaymode;
         }
 
         private static void OnLog(string message, string trace, LogType kind)

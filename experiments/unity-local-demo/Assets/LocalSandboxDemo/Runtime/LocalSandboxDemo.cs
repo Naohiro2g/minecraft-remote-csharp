@@ -48,6 +48,9 @@ namespace Code2Create.UnitySandbox.LocalDemo
             }
             var sunObject = new GameObject("Demo sun");
             sunObject.transform.SetParent(generated.transform, false);
+            // Directional Lightの位置は照明に影響しないが、Editorでも地上から照らす配置にする。
+            sunObject.transform.position = new Vector3(100, 160, 100);
+            // 光の進む向き（forward）が斜め下になる。
             sunObject.transform.rotation = Quaternion.Euler(48, -30, 0);
             var sun = sunObject.AddComponent<Light>();
             sun.type = LightType.Directional;

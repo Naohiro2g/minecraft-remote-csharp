@@ -11,7 +11,7 @@
 
 ## 試す
 
-Unity 6の**3D (Built-in Render Pipeline)**、従来の入力機能（Input Manager）を使います。現在の確認環境は`6000.6.7f1`です。コンパイルと座標の検証が通り、Play Modeでの初期化も確認しています。操作感の確認とEditor側で出ている例外については[観察メモ](observations_ja.md)を参照してください。URPなど別の描画方式への対応は後続で比べます。
+Unity 6の**3D (Built-in Render Pipeline)**、従来の入力機能（Input Manager）を使います。現在の確認環境は`6000.6.7f1`です。コンパイル・座標の検証・Play Modeの自動検証が通り、BRP版の試用も行っています。確認した内容は[観察メモ](observations_ja.md)を参照してください。URPなど別の描画方式への対応は後続で比べます。
 
 ### Unity Editorで準備する
 
