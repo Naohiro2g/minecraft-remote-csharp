@@ -19,6 +19,7 @@
 
   <ItemGroup>
     <ProjectReference Include="../../src/MinecraftRemote.Client/MinecraftRemote.Client.csproj" />
+    <None Update="Fixtures/**" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>
