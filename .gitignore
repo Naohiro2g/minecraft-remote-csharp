@@ -7,6 +7,9 @@ CLAUDE.md
 NOTES_ja.md
 handoff-materials/
 
+# 移行前から手元にあるUnity試用Projectを引き続き追跡対象外にする
+/experiments/unity-local-demo/.local/
+
 # Local configuration and secrets
 .env
 .env.*
