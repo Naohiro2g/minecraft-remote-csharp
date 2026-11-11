@@ -18,10 +18,27 @@
 
 ## 現在地
 
-**ライブラリの開発の土台を整えました。Minecraftへ接続して建築できる機能は、まだありません。**
+**C#からMinecraftへ接続し、ブロックを1つ置いて読み戻せるようになりました。**
 
-- ライブラリのひな形、開発環境、自動テストを用意しました。
-- 通信・認証・建築操作は、多言語で共通に使う仕様と検証方法を踏まえて実装します。
+直接のTCP接続、初回のペアリング、通信ルールの版の確認、ブロックの設置・取得に対応しています。
+共有テスト48ケースと、Paper / McRemoteでの実行を確認しました。
+Webブラウザからの接続、通常の切断後の自動再接続、イベントや広い範囲の建築操作は今後の実装です。
+
+## 最初のブロックを置く
+
+1. 下の「開発を始める」に従って.NET SDKを準備します。
+2. [FirstBlockの手順](examples/FirstBlock/README_ja.md)に従い、McRemoteの接続先と、置換してよい1ブロックの位置を手元で指定します。
+3. リポジトリの根で次を実行し、表示されたペアリングコマンドをMinecraft内で実行します。承認後、端末でEnterを押します。
+
+```sh
+mise exec -- dotnet run --project examples/FirstBlock/FirstBlock.csproj --configuration Release
+```
+
+指定した位置が金ブロックになり、読み戻しが一致すると`PULSE_PASS`を表示します。
+実際の世界の1ブロックを変更する作例です。元へ戻すオプションと、その限界も作例の手順に記載しています。
+次は作例の`BlockSpec`を変えて、Minecraftで結果を観察できます。
+
+APIの使い方と今回の範囲は[Client API](docs/client-api_ja.md)、検証の詳細は[Phase Iの検証記録](docs/phase-i-verification_ja.md)を参照してください。
 
 ## Unityとの関係
 
@@ -42,7 +59,7 @@ Minecraft Remoteでは、Python・Java・TypeScript・C#などから、共通の
 3. **ほかの言語や接続方法へ広げる。** TypeScript、ブラウザからの接続、C#へと展開します。
 
 C#は、この計画のPhase I（C#とUnityへ展開する段階）に位置づけられています。
-通信機能を実装するときは、先行する共通化で整えた仕様とテストを使います。
+最初の通信機能では、先行する共通化で整えた仕様とテストを使っています。
 Unity内部の試作は別repoで並行して進め、体験の知見と共通化の成果を持ち寄って連携へつなげます。
 詳しい段取りは[多言語クライアントのロードマップ](https://github.com/Naohiro2g/mc-remote-knowledge/blob/main/10-protocol/polyglot-client-roadmap_ja.md)を参照してください。
 
@@ -67,9 +84,10 @@ GitHub Actionsによる自動検証でも、変更を送信したときに同じ
 
 | 場所 | 内容 |
 | --- | --- |
-| `MinecraftRemote.Client.sln` | ライブラリとテストをまとめる開発用の構成ファイル |
-| `src/MinecraftRemote.Client/` | ライブラリ本体のひな形 |
-| `tests/MinecraftRemote.Client.Tests/` | ライブラリの名前空間を確認するテスト1件 |
+| `MinecraftRemote.Client.sln` | ライブラリ、テスト、作例をまとめる開発用の構成ファイル |
+| `src/MinecraftRemote.Client/` | TCPクライアント、認証、ブロック操作、公開する型 |
+| `tests/MinecraftRemote.Client.Tests/` | 共有fixtureとC#固有の振る舞いの検証 |
+| `examples/FirstBlock/` | 接続、ペアリング、1ブロックの設置・読み戻しの作例 |
 | `.github/workflows/ci.yml` | GitHub上でビルドとテストを自動実行する設定 |
 
 ライブラリは複数の.NET環境で使えるよう、.NET Standard 2.1（設定値は`netstandard2.1`）を対象にしています。
