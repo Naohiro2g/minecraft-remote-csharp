@@ -2,7 +2,7 @@
 
 基準はknowledge `076a127a22eaf0188c1d13822bfd55bfeee9ec38`のProtocol Inventory。
 申告protocol `23.2.1`、最初の直接TCP slice。対応の「あり」はAPIへの投影であり、全reason・全実機経路の検証を意味しない。
-実装と共有48ケースの範囲は[検証記録](phase-i-verification_ja.md)、API一覧は[Client API](client-api_ja.md)。
+実装と共有52ケースの範囲は[検証記録](phase-i-verification_ja.md)、API一覧は[Client API](client-api_ja.md)。
 一般の`RequestAsync(method, params)`だけで呼べるmethodは、個別の投影として数えない。
 
 ## method
@@ -73,7 +73,9 @@
 
 ## このsliceでのfixture接続
 
-F1の6本・48ケースすべてをCIへ接続。schema、block-value（value_refsの範囲）、MIT LICENSEも同commitからcopy。
+F1 v1の6本・52ケースすべてをCIへ接続。取得元はtooling `d2691cdafb3b7548a4c26960184266c44bfcbd93`（PR #8）。
+schema、block-value（value_refsの範囲）、MIT LICENSEも同commitからcopy。
 file別bytesとSHA-256は[PROVENANCE.json](../tests/MinecraftRemote.Client.Tests/Fixtures/PROVENANCE.json)。
 ほかの静的fixtureはこのsliceの機能外で、copyしていない。
-待ち方と再接続の後続API案は実装済みとして数えない。
+HE-11/12の自発closeとclient由来のapplication failure、CL-07/08の完了不明を含む。
+v2の待ち方・自動再接続caseはこのsliceの対象外。後続API案は実装済みとして数えない。

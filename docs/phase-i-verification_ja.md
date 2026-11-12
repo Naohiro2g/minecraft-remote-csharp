@@ -8,8 +8,9 @@
 - knowledge：`076a127a22eaf0188c1d13822bfd55bfeee9ec38`。
   [依頼票](https://github.com/Naohiro2g/mc-remote-knowledge/blob/076a127a22eaf0188c1d13822bfd55bfeee9ec38/00-hub/polyglot-csharp-start-instructions_ja.md)、
   runtime、18-csharp-client、wire-format §§2/3/3.4/4/6/6.5/7.1/7.3、versioning §8、block-value、Protocol Inventory、sample学習UXを参照。
-- fixture：`Naohiro2g/minecraft-remote-tooling@36ebe9e63e4f0afcf949eae998832f68209b8119`の
-  `packages/protocol/test/fixtures/`。同commitのREADMEでscripted peerの形を確認。
+- fixture：`Naohiro2g/minecraft-remote-tooling@d2691cdafb3b7548a4c26960184266c44bfcbd93`（PR #8）の
+  `packages/protocol/test/fixtures/`。coordinatorの通知に従って固定し直し、同commitのREADMEでscripted peerの形を確認。
+  対象はv1の52ケース。v2の待ち方・自動再接続caseはこのsliceで使用しない。
 - copyのfile別bytes・SHA-256は[PROVENANCE.json](../tests/MinecraftRemote.Client.Tests/Fixtures/PROVENANCE.json)。
   MITのLICENSEを同じディレクトリへcopyし、実装codeには依存していない。
   schemaと`block-value-v22.json`もbyte単位で保持。block valueの`value_refs`は参照先を解決して確認する。
@@ -20,21 +21,28 @@
 | file（`client-bootstrap-…-v23.2.1.json`） | case数 | PASS | skip |
 | --- | ---: | ---: | ---: |
 | framing | 7 | 7 | 0 |
-| hello | 10 | 10 | 0 |
+| hello | 12 | 12 | 0 |
 | pairing | 10 | 10 | 0 |
 | blocks | 12 | 12 | 0 |
 | errors | 3 | 3 | 0 |
-| close | 6 | 6 | 0 |
-| 合計 | 48 | 48 | 0 |
+| close | 8 | 8 | 0 |
+| 合計 | 52 | 52 | 0 |
 
 fixtureごとに独立したxUnit caseを持つ。framingは実際のbyte decoderへ投入し、対話はloopback TCPのscripted peerで
 送受信・id・結果・error・pending・credential操作を確認する。idの照合だけでなく実装したtransportを通す。
 
 最初に未実装stubで48ケースが意図した未実装の理由で落ちることを確認した。初期suite全体は54失敗・2成功、
 実装後56成功。追加検証で非有限数がJSONの文字列へ化ける問題を検出して修正した。
-最終suiteは71成功・0失敗・0skip。共有48件のほかに、公開ConnectAsyncでの認証経路、型付きblock API、
+初回の返却では71成功・0失敗・0skip。取得元の固定更新後は75成功・0失敗・0skip。共有52件のほかに、公開ConnectAsyncでの認証経路、型付きblock API、
 互換でないhello後のclose、client側期限、EOFとcancelで全pendingの回収、credential分離・条件付き削除、
 承認待ちTCP切断後のpoll継続などを含む。
+
+PR #8の追補はHE-11/12、CL-07/08の4ケース。既存48ケースはJSON値として変わっていないことを照合した。
+HE-11/12の`client_close`ではharnessからcloseを呼ばず、client自身が閉じたsocketのEOFと、
+`application_failure`に対応するlocalな`ProtocolCompatibilityException`を検査する。公開ConnectAsyncも同じfixtureで確認する。
+CL-07は完全なJSONでもLFなしの末尾を応答にせず、CL-08は明示close時にすべてのpendingを完了不明で回収する。
+この固定更新でlibraryの動作は変更していない。取得元を更新してから旧pinの整合testが不一致で落ちることを確認し、
+pin・case数・新しい期待値の観測を更新した。
 
 再現コマンドはCIと同じ。
 
@@ -95,7 +103,7 @@ callbackのthread、main threadへ戻す必要、Unity Webの直接TCP不可に�
 | 行末CR | LFでframe化。CRLFのCRはJSONの末尾空白として受理。JSON文字列中のCRを削らず、CR単独は区切らない |
 | credential key | applicationId + sessionId + tcp + 小文字化したliteral host + port。version/localeとDNS aliasの推定は含めない |
 | 認証reason後のhello | F1-AU-08〜10を含め、invalid tokenの条件付き削除 → tokenなしhelloを検証。拒否されたpairing後helloで二度目のpairingをしない |
-| client互換判定後close | HE-04/05を使うC#のunit testでEOFと追加requestなしを確認。共有fixtureの更新待ちでskipしない |
+| client互換判定後close | 共有HE-11/12で自発close・次のrequestなし・client由来の失敗を確認。公開ConnectAsyncのunit testも同じfixtureを使用 |
 
 AU-02はこのsliceの指定どおり変更せず通した。clientによる期限切れの別経路を表す共通fixtureは今後のtooling追補と照合する。
 今回、Python / Java / TypeScriptの実装codeを調べて翻訳していない。入力はcontract、共有fixture、knowledgeに返却された知見。
