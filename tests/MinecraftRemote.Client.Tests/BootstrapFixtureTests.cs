@@ -19,7 +19,7 @@ namespace Code2Create.MinecraftRemote.Client.Tests
     {
         internal static readonly string DirectoryPath = Path.Combine(AppContext.BaseDirectory, "Fixtures");
         internal static IEnumerable<JObject> ReadCases() => Directory.GetFiles(DirectoryPath, "client-bootstrap-*-v23.2.1.json")
-            .OrderBy(x => x).SelectMany(f => JObject.Parse(File.ReadAllText(f))["cases"]!.Cast<JObject>());
+            .Where(f => !f.EndsWith("operations-v23.2.1.json")).OrderBy(x => x).SelectMany(f => JObject.Parse(File.ReadAllText(f))["cases"]!.Cast<JObject>());
         public static IEnumerable<object[]> Cases() => ReadCases().Select(c => new object[] { (string)c["id"]! });
         internal static JObject Find(string id) => ReadCases().Single(c => (string)c["id"]! == id);
 
@@ -27,15 +27,16 @@ namespace Code2Create.MinecraftRemote.Client.Tests
         public void FixtureCopiesMatchPinnedSourceManifest()
         {
             var manifest = JObject.Parse(File.ReadAllText(Path.Combine(DirectoryPath, "PROVENANCE.json")));
-            Assert.Equal("d2691cdafb3b7548a4c26960184266c44bfcbd93", (string)manifest["commit"]!);
+            Assert.Equal("335c604f859d6dfad04f0434bfa4eb6445761430", (string)manifest["commit"]!);
+            Assert.Equal(11, manifest["files"]!.Count());
             foreach (var file in manifest["files"]!)
             {
                 var data = File.ReadAllBytes(Path.Combine(DirectoryPath, (string)file["file"]!));
                 Assert.Equal((long)file["bytes"]!, data.LongLength);
                 Assert.Equal((string)file["sha256"]!, Convert.ToHexString(SHA256.HashData(data)).ToLowerInvariant());
             }
-            Assert.Equal(52, ReadCases().Count());
-            Assert.Equal(52, ReadCases().Select(c => (string)c["id"]!).Distinct().Count());
+            Assert.Equal(54, ReadCases().Count());
+            Assert.Equal(54, ReadCases().Select(c => (string)c["id"]!).Distinct().Count());
             foreach (var reference in ReadCases().SelectMany(c => c["value_refs"] ?? new JArray()))
             {
                 JToken value = JToken.Parse(File.ReadAllText(Path.Combine(DirectoryPath, (string)reference["file"]!)));
@@ -200,6 +201,7 @@ namespace Code2Create.MinecraftRemote.Client.Tests
         [InlineData("F1-AU-08")]
         [InlineData("F1-AU-09")]
         [InlineData("F1-AU-10")]
+        [InlineData("F1-AU-11")]
         public async Task PublicConnectDrivesAuthenticationAndCredentialPolicy(string id)
         {
             var data = Find(id);

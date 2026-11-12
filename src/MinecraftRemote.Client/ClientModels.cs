@@ -39,10 +39,19 @@ namespace Code2Create.MinecraftRemote.Client
     {
         private static readonly string ProcessSession = Guid.NewGuid().ToString("N");
         public ClientOptions(string host, int port, ClientIdentity? identity = null, BuildContext? build = null,
-            string? applicationId = null, string? sessionId = null, bool allowPairing = true, TimeSpan? pairingPollInterval = null)
+            string? applicationId = null, string? sessionId = null, bool allowPairing = true, TimeSpan? pairingPollInterval = null, TimeSpan? responseIdleTimeout = null, bool autoReconnectEnabled = true,
+            TimeSpan? reconnectTimeout = null, TimeSpan? keepAliveTime = null, TimeSpan? keepAliveInterval = null, int keepAliveRetryCount = 10)
         {
             if (string.IsNullOrWhiteSpace(host)) throw new ArgumentException("A host is required.", nameof(host));
             if (port < 1 || port > 65535) throw new ArgumentOutOfRangeException(nameof(port));
+            ResponseIdleTimeout = Positive(responseIdleTimeout ?? TimeSpan.FromMinutes(15));
+            ReconnectTimeout = reconnectTimeout ?? TimeSpan.FromMinutes(5);
+            if (ReconnectTimeout < TimeSpan.Zero) throw new ArgumentOutOfRangeException(nameof(reconnectTimeout));
+            KeepAliveTime = Positive(keepAliveTime ?? TimeSpan.FromMinutes(2));
+            KeepAliveInterval = Positive(keepAliveInterval ?? TimeSpan.FromSeconds(30));
+            if (keepAliveRetryCount < 1) throw new ArgumentOutOfRangeException(nameof(keepAliveRetryCount));
+            KeepAliveRetryCount = keepAliveRetryCount;
+            AutoReconnectEnabled = autoReconnectEnabled;
             Host = host; Port = port;
             Identity = identity ?? new ClientIdentity("minecraft-remote-csharp", "development");
             Build = build;
@@ -51,6 +60,19 @@ namespace Code2Create.MinecraftRemote.Client
             if (PairingPollInterval < TimeSpan.Zero) throw new ArgumentOutOfRangeException(nameof(pairingPollInterval));
             CredentialTarget = new CredentialTarget(applicationId ?? Identity.Name, sessionId ?? ProcessSession, host, port);
         }
+        private static TimeSpan Positive(TimeSpan value) => value > TimeSpan.Zero ? value : throw new ArgumentOutOfRangeException(nameof(value));
+        public TimeSpan ResponseIdleTimeout { get; }
+        public bool AutoReconnectEnabled { get; }
+        public TimeSpan ReconnectTimeout { get; }
+        public TimeSpan KeepAliveTime { get; }
+        public TimeSpan KeepAliveInterval { get; }
+        public int KeepAliveRetryCount { get; }
+        internal IClientClock Clock { get; set; } = new SystemClientClock();
+        internal Func<CancellationToken, Task<System.Net.Sockets.TcpClient>>? DialOverride { get; set; }
+        internal Action<ProtocolSession>? SessionOpened { get; set; }
+        internal Func<double> RandomFraction { get; set; } = NextRandom;
+        private static readonly Random Random = new Random();
+        private static double NextRandom() { lock (Random) return Random.NextDouble(); }
         public string Host { get; }
         public int Port { get; }
         public ClientIdentity Identity { get; }

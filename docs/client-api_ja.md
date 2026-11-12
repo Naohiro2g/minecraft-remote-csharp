@@ -50,7 +50,7 @@ stateは文字列・有限の数値・真偽値のみ。catalog照合、stateの
 
 最初に保存token付き、またはtokenなしでhelloします。`auth_required`のときだけpairBeginへ進み、
 同じ接続試行では一度だけpromptを呼びます。pairBeginは`token_type: session`と`client`を送ります。
-承認待ちのTCPが閉じても、同じpairing_idの未送信pollは別TCPから続けられます。送信済みpollの完了不明は再送しません。
+承認待ちのTCPが閉じても、同じpairing_idの未送信pollは別TCPから続けられます。応答を失ったpollは完了不明で終え、期限内なら同じpairing_idの次のpollを新しいTCPで続けます。二度目のpairBeginは行いません。
 成功後は新しいTCPでtoken付きhelloを行い、それが拒否されても二度目のpairingへ入りません。
 
 `token_expired/token_revoked/token_not_found/token_invalid`では、helloに使ったtokenだけを削除し、tokenなしhelloへ戻ります。
@@ -99,19 +99,10 @@ UnityのUI更新はmain threadの`SynchronizationContext`等へ戻してくだ�
 後の処理は利用側のcontextに従います。main threadを`.Wait()`で止めると描画や操作が止まります。
 Unity Webは直接TCPを使えないため、今回のAPIだけでは接続できません。WebSocket / Bridgeは後の範囲です。
 
-## 待ち方・再接続：後続APIの提案
+## 待ち方と自動再接続
 
-通常requestのidle timeoutと、切断後の自動再接続は今回未実装です。cancelしないrequestは応答か切断まで待ちます。
-切断したclientの次の呼び出しは`RequestNotSentException`です。callerが必要性を判断し、新しい`ConnectAsync`を呼びます。
-
-以下は未実装のAPI案です。既定値などを新たなProtocol判断として確定していません。
-
-| 案 | 後で実現する挙動 |
-| --- | --- |
-| `ClientOptions.ResponseIdleTimeout`、callごとの`RequestOptions.ResponseIdleTimeout` | 既定は長く粘り強く待つ。最後の受信から測り、超過時は全pendingを完了不明として回収。具体的な既定秒数は次の票で検証 |
-| `ClientOptions.AutoReconnectEnabled`（既定true） | 切断後の次の呼び出しで接続。falseなら明示的な再接続を要求。送信済みrequestは再送しない |
-| `ConnectionRestored`の通知（新しいhello、接続generation） | 成功時のhelloを渡す。callerが古いhandle、event cursor、epoch依存状態を破棄できるようにする。Unityへの通知threadを明記する |
-
-再接続はhelloから開始し、当初のbuildを再設定します。認証が通らなければ自動pairingで作業を再開せず失敗を返し、
-callerへ承認の判断を戻す案です。catalog hashの変化やepochの扱いは後続sliceで仕様と照合します。
-notification / FAST / flushと混ぜず、未送信と完了不明を区別したまま追加します。
+E2で実装した設定・通知・例外・既定値は[再接続と待機制御](e2-reconnect_ja.md)を参照してください。
+`ClientOptions`で接続ごとの`ResponseIdleTimeout/AutoReconnectEnabled/ReconnectTimeout/KeepAliveTime/KeepAliveInterval/KeepAliveRetryCount`を指定できます。
+`RequestAsync(method,params,new RequestOptions(timeout),ct)`で呼び出しごとのidle上限を延ばせます。
+`ConnectionRestored`イベント、`ConnectionGeneration`、`KeepAliveTuningSupported`を公開します。
+再接続前に送ったrequestは再送せず、再接続で認証が必要ならpairingを始めず`RequestNotSentException`で止まります。

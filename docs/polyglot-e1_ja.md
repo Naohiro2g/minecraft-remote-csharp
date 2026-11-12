@@ -2,7 +2,7 @@
 
 基準はknowledge `076a127a22eaf0188c1d13822bfd55bfeee9ec38`のProtocol Inventory。
 申告protocol `23.2.1`、最初の直接TCP slice。対応の「あり」はAPIへの投影であり、全reason・全実機経路の検証を意味しない。
-実装と共有52ケースの範囲は[検証記録](phase-i-verification_ja.md)、API一覧は[Client API](client-api_ja.md)。
+実装と共有54ケースの範囲は[検証記録](phase-i-verification_ja.md)、API一覧は[Client API](client-api_ja.md)。
 一般の`RequestAsync(method, params)`だけで呼べるmethodは、個別の投影として数えない。
 
 ## method
@@ -64,18 +64,18 @@
 | request／notification／flushと順序 | 部分：id付きrequestを順に送信し、応答を待てる。notification / FAST / flushなし |
 | events cursor／loss | なし |
 | error reason | あり：code/message/data/未知reasonを保持。protocol_mismatchはreason判定。local errorを別型化 |
-| build context | 部分：helloのBuildContextだけ。変更method未投影 |
+| build context | 部分：hello初期設定と、成功したraw build変更のdimension/originを再接続で復元。型付き変更method未投影 |
 | BlockValue／BlockSpec | あり：構造化ID/state。入力部分stateはserver補完、出力全stateをToSpecで再利用 |
 | catalog／constants | なし：helloのhashはJsonで保持するだけ。catalog取得・cache・生成定数なし |
 | helloの`world_constants` | 部分：HelloInfo.Jsonでopaqueに保持。専用propertyや生成定数なし |
-| epoch／reconnect | 部分：close時に全pendingを完了不明で回収。明示した次のConnectAsyncは新しいhello。epoch依存APIと通常の自動再接続なし |
+| epoch／reconnect | 部分：close時に全pendingを完了不明で回収。次の呼び出しで自動再接続、helloの版/hash再確認、generationとevent lossを通知。handle/cursor/cache APIは未投影 |
 | WireScopeのobserver | なし |
 
 ## このsliceでのfixture接続
 
-F1 v1の6本・52ケースすべてをCIへ接続。取得元はtooling `d2691cdafb3b7548a4c26960184266c44bfcbd93`（PR #8）。
+F1 v1の6本・54ケースすべてをCIへ接続。取得元はtooling `335c604f859d6dfad04f0434bfa4eb6445761430`。
 schema、block-value（value_refsの範囲）、MIT LICENSEも同commitからcopy。
 file別bytesとSHA-256は[PROVENANCE.json](../tests/MinecraftRemote.Client.Tests/Fixtures/PROVENANCE.json)。
 ほかの静的fixtureはこのsliceの機能外で、copyしていない。
 HE-11/12の自発closeとclient由来のapplication failure、CL-07/08の完了不明を含む。
-v2の待ち方・自動再接続caseはこのsliceの対象外。後続API案は実装済みとして数えない。
+v2は10ケースPASS、OP-06（FAST/flush）とOP-11（handle/cursor/catalog cache）は未実装機能のtodo。詳細は[e2-reconnect_ja.md](e2-reconnect_ja.md)。
