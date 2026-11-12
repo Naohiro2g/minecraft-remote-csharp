@@ -39,12 +39,11 @@ namespace Code2Create.MinecraftRemote.Client.Tests
         }
 
         [Theory]
-        [InlineData("F1-HE-04")]
-        [InlineData("F1-HE-05")]
+        [InlineData("F1-HE-11")]
+        [InlineData("F1-HE-12")]
         public async Task IncompatibleHelloClosesBeforeAnyOtherRequestAndPreservesToken(string id)
         {
             var data = Find(id);
-            ((JArray)data["steps"]!).Add(new JObject { ["op"] = "client_close" });
             await using var peer = new ScriptedPeer(data);
             var options = Options(peer.Port, data); var store = new CountingStore();
             await SeedToken(data, options, store);

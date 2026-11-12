@@ -27,15 +27,15 @@ namespace Code2Create.MinecraftRemote.Client.Tests
         public void FixtureCopiesMatchPinnedSourceManifest()
         {
             var manifest = JObject.Parse(File.ReadAllText(Path.Combine(DirectoryPath, "PROVENANCE.json")));
-            Assert.Equal("36ebe9e63e4f0afcf949eae998832f68209b8119", (string)manifest["commit"]!);
+            Assert.Equal("d2691cdafb3b7548a4c26960184266c44bfcbd93", (string)manifest["commit"]!);
             foreach (var file in manifest["files"]!)
             {
                 var data = File.ReadAllBytes(Path.Combine(DirectoryPath, (string)file["file"]!));
                 Assert.Equal((long)file["bytes"]!, data.LongLength);
                 Assert.Equal((string)file["sha256"]!, Convert.ToHexString(SHA256.HashData(data)).ToLowerInvariant());
             }
-            Assert.Equal(48, ReadCases().Count());
-            Assert.Equal(48, ReadCases().Select(c => (string)c["id"]!).Distinct().Count());
+            Assert.Equal(52, ReadCases().Count());
+            Assert.Equal(52, ReadCases().Select(c => (string)c["id"]!).Distinct().Count());
             foreach (var reference in ReadCases().SelectMany(c => c["value_refs"] ?? new JArray()))
             {
                 JToken value = JToken.Parse(File.ReadAllText(Path.Combine(DirectoryPath, (string)reference["file"]!)));
@@ -133,7 +133,13 @@ namespace Code2Create.MinecraftRemote.Client.Tests
                             foreach (var pending in requests.Keys) await Observe(pending);
                             break;
                         case "client_close":
-                            await session!.DisposeAsync();
+                            if (expected["application_failure"] != null)
+                            {
+                                // HE-11/12は自発closeの観測。harnessから強制closeしない。
+                                await session!.Closed.WaitAsync(TimeSpan.FromSeconds(5));
+                                Assert.Null(await reader!.ReadLineAsync().WaitAsync(TimeSpan.FromSeconds(5)));
+                            }
+                            else await session!.DisposeAsync();
                             foreach (var pending in requests.Keys) await Observe(pending);
                             break;
                         case "advance_time": // peerのfixture時計。AU-02はserverのpair_expired応答を検査する。
@@ -152,6 +158,12 @@ namespace Code2Create.MinecraftRemote.Client.Tests
                 {
                     var error = Assert.IsType<RemoteErrorException>(lastError);
                     Equal(expected["error"]!, new JObject { ["code"] = error.Code, ["message"] = error.Message, ["data"] = error.ErrorData });
+                }
+                if (expected["application_failure"] != null)
+                {
+                    Assert.Equal("client", (string)expected["application_failure"]!["source"]!);
+                    Assert.Equal("incompatible_protocol", (string)expected["application_failure"]!["kind"]!);
+                    Assert.IsType<ProtocolCompatibilityException>(lastError);
                 }
                 if (expected["pending_ids"] != null) Equal(expected["pending_ids"]!, new JArray(session?.PendingIds ?? Array.Empty<long>()));
                 if (expected["completed_ids"] != null) Equal(expected["completed_ids"]!, new JArray(completed.Keys.OrderBy(x => x)));
