@@ -19,6 +19,7 @@ libraryはnetstandard2.1、namespaceとNewtonsoft.Json依存は従来のまま�
 値は運用実測済みの推奨値ではなく、長く待つ方針から選んだ初期値。実測したのはloopbackでの状態遷移と仮想時計の境界であり、
 長時間の建築やWi-Fi切断の耐性を実機で測ったとは主張しない。接続ごとに延長できる。
 通常idleの監視周期は1秒。pendingなしの無通信では応答timeoutを発火させない。
+異なる上限のpendingが同じ接続にあれば、最短の上限で接続を回収する。長い上限のcallも、その接続の回収には巻き込まれる。
 
 TCP keepaliveは有効。新しい詳細option名はnetstandard2.1の参照enumに無いので、実行環境のenumを解決して設定する。
 .NET 10 / Linuxでは詳細設定まで成功した。runtime/OSが詳細を受け付けなければ基本keepaliveとOS既定値になり、
@@ -96,7 +97,7 @@ runnerはapplication callを開始するだけで応答を待たず、clientが�
 生存確認とsocket errorはtransportの判定境界を注入し、probeの実環境耐性を合格としない。
 
 共有fixture外では、AU-12後に同じpairing_idでpoll→承認→token helloまで続ける流れ、OS threadのBarrierから同時に始める再接続、
-呼び出しごとのidle延長、backoffの乱数境界を追加した。全suiteは92 PASS、skip0、build警告0。
+呼び出しごとのidle延長、backoffの乱数境界を追加した。全suiteは93 PASS、skip0、build警告0。
 旧動作相当へ戻す比較では再接続・idle回収・poll継続の不足で11件中8件が失敗し、実装を復元してgreenを確認。
 これは比較実行の記録であり、実装前に全追加ケースを順にred確認したとの主張ではない。
 
@@ -121,3 +122,6 @@ EOF後の次pollは同じpairing_idの継続で、完了不明となったpoll�
 Protocol Inventoryの共有fixture行は、以前の「v1 52のみ」から「v1 54すべて、v2 10 PASS/2 todo、schema2本・block値参照・LICENSE」へ更新する案。
 新しいwireの判断や、機能の無いepoch cacheの仕様はこのclient独自に決めていない。
 repo外のUnity 6000.6.8f1でも更新DLLによるTCP hello/set/get/closeを確認した（Editor終了0）。IL2CPP/mobile/Webの検証ではない。
+
+追加のremote再helloテストで、code -32600で届くprotocol_mismatchもdata.reasonで判定し、
+未送信の原因をIncompatibleProtocolとして元のerrorを保持することも確認した。修正前はConnectionFailedとなり、このtestが失敗した。

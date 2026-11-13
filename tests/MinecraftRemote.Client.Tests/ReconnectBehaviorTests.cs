@@ -73,4 +73,21 @@ public sealed class ReconnectBehaviorTests
         }
         finally{listener.Stop();}
     }
+    [Fact]
+    public async Task RemoteMismatchOnReconnectIsNotSentAndPreservesOriginalError()
+    {
+        var original=Find("F1-BL-01");var first=original["steps"]!.Take(3).Select(s=>s.DeepClone()).ToArray();
+        var steps=new JArray(first);steps.Add(new JObject{["op"]="peer_eof"});steps.Add(new JObject{["op"]="connect"});
+        steps.Add(first[1].DeepClone());
+        steps.Add(Find("F1-HE-10")["steps"]!.Single(s=>(string)s["op"]! == "peer_send").DeepClone());
+        steps.Add(new JObject{["op"]="client_close"});
+        await using var peer=new ScriptedPeer(new JObject{["steps"]=steps});var options=Options(peer.Port,original);
+        var store=new InMemoryCredentialStore();await SeedToken(original,options,store);
+        var server=peer.RunAsync();await using var client=await MinecraftClient.ConnectAsync(options,store);
+        for(int i=0;i<1000 && client.IsConnected;i++)await Task.Delay(1);
+        var error=await Assert.ThrowsAsync<RequestNotSentException>(()=>client.GetBlockAsync(0,0,0).WaitAsync(TimeSpan.FromSeconds(5)));
+        Assert.Equal(NotSentCause.IncompatibleProtocol,error.Cause);
+        var remote=Assert.IsType<RemoteErrorException>(error.InnerException);Assert.Equal(-32600,remote.Code);Assert.True(remote.IsProtocolMismatch);
+        await server.WaitAsync(TimeSpan.FromSeconds(5));
+    }
 }

@@ -205,7 +205,8 @@ namespace Code2Create.MinecraftRemote.Client
                 {
                     if (next != null) await next.DisposeAsync().ConfigureAwait(false);
                     if (ProtocolSession.InvalidToken(error.Reason) && saved != null && !tokenRetried) { token = null; tokenRetried = true; continue; }
-                    throw new RequestNotSentException(error.Reason == "auth_required" ? NotSentCause.PairingRequired : NotSentCause.ConnectionFailed, error);
+                    throw new RequestNotSentException(error.IsProtocolMismatch ? NotSentCause.IncompatibleProtocol :
+                        error.Reason == "auth_required" ? NotSentCause.PairingRequired : NotSentCause.ConnectionFailed, error);
                 }
                 catch (Exception error) when (error is ConnectionFailedException || error is CompletionUnknownException || error is RequestNotSentException)
                 {
