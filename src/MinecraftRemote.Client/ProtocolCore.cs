@@ -63,11 +63,15 @@ namespace Code2Create.MinecraftRemote.Client
         private readonly Task readerTask;
         private bool isOpen = true;
         private long nextId;
+        private readonly CancellationTokenSource lifetime = new CancellationTokenSource();
+        private readonly Dictionary<long, TimeSpan> idleLimits = new Dictionary<long, TimeSpan>();
+        private TimeSpan lastReceived;
 
         private ProtocolSession(TcpClient socket, ClientOptions options, ICredentialStore store)
         {
             this.socket = socket; stream = socket.GetStream(); this.options = options; this.store = store;
             readerTask = ReadLoopAsync();
+            _ = WatchIdleAsync();
         }
         internal static async Task<ProtocolSession> OpenAsync(ClientOptions options, ICredentialStore store, CancellationToken cancellationToken = default)
         {
@@ -75,10 +79,25 @@ namespace Code2Create.MinecraftRemote.Client
             var socket = new TcpClient { NoDelay = true };
             try
             {
-                using (cancellationToken.Register(() => socket.Dispose()))
-                    await socket.ConnectAsync(options.Host, options.Port).ConfigureAwait(false);
+                if (options.DialOverride != null) { socket.Dispose(); socket = await options.DialOverride(cancellationToken).ConfigureAwait(false); }
+                else
+                    using (cancellationToken.Register(() => socket.Dispose()))
+                        await socket.ConnectAsync(options.Host, options.Port).ConfigureAwait(false);
+                socket.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true);
+                // netstandard2.1 does not name the newer options; use the runtime's enum when supported.
+                bool tuned = true;
+                foreach (var item in new[] { ("TcpKeepAliveTime", (int)Math.Ceiling(options.KeepAliveTime.TotalSeconds)),
+                    ("TcpKeepAliveInterval", (int)Math.Ceiling(options.KeepAliveInterval.TotalSeconds)), ("TcpKeepAliveRetryCount", options.KeepAliveRetryCount) })
+                {
+                    if (!Enum.TryParse(item.Item1, out SocketOptionName option)) { tuned = false; continue; }
+                    try { socket.Client.SetSocketOption(SocketOptionLevel.Tcp, option, item.Item2); }
+                    catch (SocketException) { tuned = false; }
+                }
                 cancellationToken.ThrowIfCancellationRequested();
-                return new ProtocolSession(socket, options, store);
+                var session = new ProtocolSession(socket, options, store);
+                session.KeepAliveTuningSupported = tuned;
+                options.SessionOpened?.Invoke(session);
+                return session;
             }
             catch (Exception error) when (error is SocketException || error is IOException || error is ObjectDisposedException || error is OperationCanceledException)
             {
@@ -87,16 +106,17 @@ namespace Code2Create.MinecraftRemote.Client
                 throw new ConnectionFailedException();
             }
         }
+        internal bool KeepAliveTuningSupported { get; private set; }
         internal bool IsOpen { get { lock (sync) return isOpen; } }
         internal IReadOnlyList<long> PendingIds { get { lock (sync) return pending.Keys.OrderBy(x => x).ToArray(); } }
         internal Task Closed => closed.Task;
         internal Action<long, bool>? ResponseObserved { get; set; }
         internal static bool InvalidToken(string? reason) => reason == "token_expired" || reason == "token_revoked" || reason == "token_not_found" || reason == "token_invalid";
 
-        internal async Task<JToken> RequestAsync(string method, JToken parameters, CancellationToken cancellationToken = default)
+        internal async Task<JToken> RequestAsync(string method, JToken parameters, CancellationToken cancellationToken = default, RequestOptions? requestOptions = null)
         {
             JToken result;
-            try { result = await SendAsync(method, parameters, cancellationToken).ConfigureAwait(false); }
+            try { result = await SendAsync(method, parameters, cancellationToken, requestOptions?.ResponseIdleTimeout ?? options.ResponseIdleTimeout).ConfigureAwait(false); }
             catch (RemoteErrorException error)
             {
                 var rejectedToken = method == "hello" ? (string?)parameters["auth"]?["token"] : null;
@@ -122,7 +142,7 @@ namespace Code2Create.MinecraftRemote.Client
             return result;
         }
 
-        private async Task<JToken> SendAsync(string method, JToken parameters, CancellationToken cancellationToken)
+        private async Task<JToken> SendAsync(string method, JToken parameters, CancellationToken cancellationToken, TimeSpan idleTimeout)
         {
             if (string.IsNullOrWhiteSpace(method)) throw new ArgumentException("A method is required.", nameof(method));
             if (parameters == null) throw new ArgumentNullException(nameof(parameters));
@@ -145,7 +165,8 @@ namespace Code2Create.MinecraftRemote.Client
                     if (!isOpen) throw new RequestNotSentException();
                     nextId = id;
                     response = new TaskCompletionSource<JToken>(TaskCreationOptions.RunContinuationsAsynchronously);
-                    pending.Add(id, response);
+                    if (pending.Count == 0) lastReceived = options.Clock.Now;
+                    pending.Add(id, response); idleLimits.Add(id, idleTimeout);
                 }
                 registration = cancellationToken.Register(() => { lock (sync) { if (pending.ContainsKey(id)) Finish(); } });
                 try { await stream.WriteAsync(bytes, 0, bytes.Length, cancellationToken).ConfigureAwait(false); }
@@ -166,6 +187,7 @@ namespace Code2Create.MinecraftRemote.Client
                 {
                     int size = await stream.ReadAsync(buffer, 0, buffer.Length).ConfigureAwait(false);
                     if (size == 0) break;
+                    lock (sync) lastReceived = options.Clock.Now;
                     var bytes = new byte[size]; Array.Copy(buffer, bytes, size);
                     foreach (var token in framer.Push(bytes))
                     {
@@ -177,7 +199,7 @@ namespace Code2Create.MinecraftRemote.Client
                         if (error != null && (error["code"]?.Type != JTokenType.Integer || error["message"]?.Type != JTokenType.String ||
                             !int.TryParse(error["code"]!.ToString(), NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out _))) continue;
                         TaskCompletionSource<JToken>? response;
-                        lock (sync) { pending.TryGetValue(id, out response); if (response != null) pending.Remove(id); }
+                        lock (sync) { pending.TryGetValue(id, out response); if (response != null) { pending.Remove(id); idleLimits.Remove(id); } }
                         ResponseObserved?.Invoke(id, response != null);
                         if (response == null) continue;
                         if (error != null) response.TrySetException(new RemoteErrorException(error));
@@ -195,13 +217,28 @@ namespace Code2Create.MinecraftRemote.Client
             lock (sync)
             {
                 if (!isOpen) return;
-                isOpen = false; requests = pending.Values.ToArray(); pending.Clear();
+                isOpen = false; requests = pending.Values.ToArray(); pending.Clear(); idleLimits.Clear();
             }
+            lifetime.Cancel();
             socket.Dispose();
             foreach (var request in requests) request.TrySetException(new CompletionUnknownException());
             closed.TrySetResult(true);
         }
 
+        internal void TransportLost() => Finish();
+        private async Task WatchIdleAsync()
+        {
+            try
+            {
+                while (true)
+                {
+                    await options.Clock.Delay(TimeSpan.FromSeconds(1), lifetime.Token).ConfigureAwait(false);
+                    lock (sync)
+                        if (idleLimits.Count > 0 && options.Clock.Now - lastReceived >= idleLimits.Values.Min()) Finish();
+                }
+            }
+            catch (OperationCanceledException) { }
+        }
         public async ValueTask DisposeAsync() { Finish(); await readerTask.ConfigureAwait(false); }
 
         internal static void ValidateJson(JToken value)

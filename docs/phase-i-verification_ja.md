@@ -1,3 +1,5 @@
+> この文書は初回sliceと52ケース更新時点の記録です。現行の54ケース・v2・再接続の検証は[E2記録](e2-reconnect_ja.md)を参照してください。
+
 # Phase I：最初のTCP sliceの検証記録
 
 対象は一般用途C# Client Libraryの`connect → hello → protocol互換判定 → 必要なら初回pairing → setBlock → getBlock → close`です。

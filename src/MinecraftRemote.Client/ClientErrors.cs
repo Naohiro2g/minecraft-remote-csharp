@@ -25,7 +25,9 @@ namespace Code2Create.MinecraftRemote.Client
     public sealed class CompletionUnknownException : IOException
     { internal CompletionUnknownException() : base("The connection closed before a complete response. The outcome is unknown; the request was not retried.") { } }
     public sealed class RequestNotSentException : IOException
-    { internal RequestNotSentException() : base("The connection is unavailable. The request was not sent.") { } }
+    { internal RequestNotSentException(NotSentCause cause = NotSentCause.Closed, Exception? failure = null)
+            : base("The request was not sent.", failure) { Cause = cause; }
+        public NotSentCause Cause { get; } }
     public sealed class ConnectionFailedException : IOException
     { internal ConnectionFailedException() : base("The TCP connection could not be established. No request was sent.") { } }
     public sealed class PairingRequiredException : Exception
