@@ -21,6 +21,8 @@ internal sealed class ManualClock : IClientClock
     private readonly object sync = new();
     private TimeSpan now;
     private readonly List<(TimeSpan due, TaskCompletionSource<bool> task, CancellationTokenRegistration registration)> waiting = new();
+    private TaskCompletionSource<bool> nextDelay = new(TaskCreationOptions.RunContinuationsAsynchronously);
+    internal Task NextDelay { get { lock (sync) return nextDelay.Task; } }
     public TimeSpan Now { get { lock(sync) return now; } }
     public Task Delay(TimeSpan delay, CancellationToken ct)
     {
@@ -29,7 +31,10 @@ internal sealed class ManualClock : IClientClock
             ct.ThrowIfCancellationRequested();
             var t = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
             var registration = ct.Register(() => t.TrySetCanceled(ct));
-            waiting.Add((now + delay, t, registration)); return t.Task;
+            waiting.Add((now + delay, t, registration));
+            nextDelay.TrySetResult(true);
+            nextDelay = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+            return t.Task;
         }
     }
     public void Advance(TimeSpan delta)
@@ -54,11 +59,18 @@ public sealed class OperationsFixtureTests
     {
         using var barrier = new Barrier(2);
         var concurrentParams = new HashSet<string>();
-        var data = JObject.Parse(File.ReadAllText(Path.Combine(DirectoryPath,"client-bootstrap-operations-v23.2.1.json")))["cases"]!.Single(c => (string)c["id"]! == id);
+        var fixture = JObject.Parse(File.ReadAllText(Path.Combine(DirectoryPath, "client-bootstrap-operations-v23.2.1.json")))["cases"]!
+            .Cast<JObject>().Single(c => (string)c["id"]! == id);
+        var data = UseCandidateVersions(fixture);
+        if (id == "F1-OP-07")
+        {
+            var incompatible = data.SelectTokens("steps[*].message.result.protocol").Single(p => (string?)p == "24.2.1");
+            incompatible.Replace(new JValue("23.2.1"));
+        }
         var listener = new TcpListener(IPAddress.Loopback,0); listener.Start();
         var clock = new ManualClock();
         var options = new ClientOptions(IPAddress.Loopback.ToString(),((IPEndPoint)listener.LocalEndpoint).Port,
-            new ClientIdentity("fixture-client","2321.1.0"), new BuildContext("minecraft:overworld",0,0,0), reconnectTimeout:TimeSpan.Zero) { Clock = clock };
+            new ClientIdentity("fixture-client","2400.0.0"), new BuildContext("minecraft:overworld",0,0,0), reconnectTimeout:TimeSpan.Zero) { Clock = clock };
         var store = new InMemoryCredentialStore();
         if(id != "F1-OP-08") await store.SaveAsync(options.CredentialTarget,"mcrs_fixture_only_not_a_real_credential");
         var sessions = new List<ProtocolSession>();

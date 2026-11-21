@@ -9,7 +9,7 @@ namespace Code2Create.MinecraftRemote.Client
 {
     public sealed class MinecraftClient : IAsyncDisposable
     {
-        public const string Protocol = "23.2.1";
+        public const string Protocol = "24.0.0";
         private ProtocolSession session;
         private readonly ClientOptions options;
         private readonly ICredentialStore store;

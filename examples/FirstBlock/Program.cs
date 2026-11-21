@@ -16,23 +16,28 @@ internal static class Program
             string Read(string name) => Environment.GetEnvironmentVariable(name)
                 ?? throw new ArgumentException("必要な環境変数がありません: " + name);
             int Number(string name) => int.Parse(Read(name), CultureInfo.InvariantCulture);
-            var options = new ClientOptions(Read("MC_REMOTE_HOST"), Number("MC_REMOTE_PORT"),
-                new ClientIdentity("csharp-first-block", "development"));
+            var options = new ClientOptions(Read("MC_REMOTE_HOST"), Number("MC_REMOTE_PORT"));
             int x = Number("MC_REMOTE_X"), y = Number("MC_REMOTE_Y"), z = Number("MC_REMOTE_Z");
             bool restore = args.Contains("--restore");
 
+            bool pairingRequested = false;
             await using var client = await MinecraftClient.ConnectAsync(options,
                 credentialStore: new NoCredentialStore(),
                 onPairing: async (prompt, ct) =>
                 {
                     // pair codeは表示用。tokenやpairing_idは表示・保存しない。
+                    pairingRequested = true;
                     Console.WriteLine("PAIRING_APPROVAL_REQUIRED");
                     Console.WriteLine(prompt.Command);
                     Console.WriteLine("Minecraft内で承認したら、この端末でEnterを押してください。");
                     if (await Console.In.ReadLineAsync(ct) == null) throw new OperationCanceledException();
                 }, cancellationToken: shutdown.Token);
 
+            if (pairingRequested) Console.WriteLine("PAIRING_PASS");
             Console.WriteLine("HELLO_PASS");
+            Console.WriteLine("HELLO_PROTOCOL=" + client.Hello.Protocol);
+            if (client.Hello.Json["server"] is Newtonsoft.Json.Linq.JObject server && (string?)server["version"] is string version)
+                Console.WriteLine("SERVER_VERSION=" + version);
             Console.WriteLine("MC_VERSION=" + client.Hello.MinecraftVersion);
             BlockValue? previous = restore ? await client.GetBlockAsync(x, y, z, shutdown.Token) : null;
             bool writeStarted = false;

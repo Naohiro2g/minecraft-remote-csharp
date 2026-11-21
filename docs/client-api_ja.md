@@ -84,7 +84,7 @@ remote例外とlocal例外を分け、localな失敗にremoteのcode/reasonを�
 
 送信はUTF-8のcompact JSON + LF。受信はLFで区切り、CRLFのCRはJSONの行末空白として受けます。
 CR単独では区切りません。非JSON行、知らないid、LFのない最後の断片は応答にしません。
-応答の版はmajor一致・server minor以上・patch無視で判定し、申告は`23.2.1`です。
+応答の版はmajor一致・server minor以上・patch無視で判定し、申告は`24.0.0`です。既定の`ClientIdentity.Version`はライブラリの版（`2400.0.0`）です。
 一度送ったrequestは自動再送しません。close時に未完了requestをflushする機能もありません。
 
 ## Unityで使う場合

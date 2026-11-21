@@ -234,7 +234,7 @@ namespace Code2Create.MinecraftRemote.Client
                 {
                     await options.Clock.Delay(TimeSpan.FromSeconds(1), lifetime.Token).ConfigureAwait(false);
                     lock (sync)
-                        if (idleLimits.Count > 0 && options.Clock.Now - lastReceived >= idleLimits.Values.Min()) Finish();
+                        if (idleLimits.Count > 0 && options.Clock.Now - lastReceived >= idleLimits.Values.Max()) Finish();
                 }
             }
             catch (OperationCanceledException) { }

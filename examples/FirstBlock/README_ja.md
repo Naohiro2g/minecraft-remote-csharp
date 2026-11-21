@@ -1,12 +1,11 @@
-# FirstBlock：置いて読み戻す
+# .NETコンソールで始める
 
-一般用途C# Client Libraryの最小作例です。このcheckoutのライブラリを直接参照し、solutionと一緒にビルドします。
-conceptは「接続・ペアリング」と「ブロックを置いて読む」、段階はminimum、ownerはこのrepoです。
-対象protocolは`23.2.1`。Paper 1.21.11 / McRemote 2321.1.0で確認しました。
+FirstBlockは、C#から1ブロックを置いて読み戻す作例です。このチェックアウトのライブラリを参照します。
+接続先にはprotocol `24.0.0`と互換性のあるMcRemoteまたはUnity箱庭を使います。
 
 ## 準備と変更範囲
 
-READMEの開発手順でmiseと.NET SDKを準備し、Minecraft側でMcRemoteを動かします。
+リポジトリをVS Codeで開き、[開発を始める](../../README.md#開発を始める)の手順でmiseと.NET SDKを準備します。接続先でMcRemoteまたはUnity箱庭を起動します。
 必要なのはMinecraftのゲーム用ポートではなく、McRemoteのTCPポートです。
 
 実行すると、指定する位置の**実worldの1ブロックを金ブロックへ置換**します。playerだけに見える仮表示ではありません。
@@ -33,10 +32,14 @@ mise exec -- dotnet run --project examples/FirstBlock/FirstBlock.csproj --config
 承認したら作例の端末でEnterを押します。期限を過ぎたら作例を終了し、実行し直して新しいコマンドを使います。
 承認は人が行い、作例が代理で承認することはありません。
 
-成功時は次を表示します。`RESTORE_PASS`は`--restore`を付けた場合です。
+読み戻しが一致すると`PULSE_PASS`を表示します。`PAIRING_PASS`はペアリングした場合、`RESTORE_PASS`は`--restore`を付けた場合に表示します。
+下はペアリングしてMcRemote 2400.0.0rc1へ接続したときの表示例です。
 
 ```text
+PAIRING_PASS
 HELLO_PASS
+HELLO_PROTOCOL=24.0.0
+SERVER_VERSION=2400.0.0rc1
 MC_VERSION=1.21.11
 PULSE_PASS: hello / setBlock / getBlock
 RESTORE_PASS

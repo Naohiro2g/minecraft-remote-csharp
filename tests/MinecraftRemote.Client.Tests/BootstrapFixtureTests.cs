@@ -23,6 +23,24 @@ namespace Code2Create.MinecraftRemote.Client.Tests
         public static IEnumerable<object[]> Cases() => ReadCases().Select(c => new object[] { (string)c["id"]! });
         internal static JObject Find(string id) => ReadCases().Single(c => (string)c["id"]! == id);
 
+        internal static JObject FindCandidateCase(string id) => UseCandidateVersions(Find(id));
+
+        internal static JObject UseCandidateVersions(JObject testCase)
+        {
+            // Keep the pinned fixture files and their original wire replays intact.
+            foreach (var protocol in testCase.SelectTokens("steps[*].message.params.protocol")
+                .Concat(testCase.SelectTokens("steps[*].message.result.protocol"))
+                .Concat(testCase.SelectTokens("expected.result.protocol")).ToArray())
+            {
+                if ((string?)protocol == "23.2.1") protocol.Replace(new JValue("24.0.0"));
+            }
+            foreach (var identityVersion in testCase.SelectTokens("steps[*].message.params.client.version").ToArray())
+            {
+                if ((string?)identityVersion == "2321.1.0") identityVersion.Replace(new JValue("2400.0.0"));
+            }
+            return testCase;
+        }
+
         [Fact]
         public void FixtureCopiesMatchPinnedSourceManifest()
         {
@@ -204,7 +222,7 @@ namespace Code2Create.MinecraftRemote.Client.Tests
         [InlineData("F1-AU-11")]
         public async Task PublicConnectDrivesAuthenticationAndCredentialPolicy(string id)
         {
-            var data = Find(id);
+            var data = FindCandidateCase(id);
             await using var peer = new ScriptedPeer(data);
             var options = Options(peer.Port, data);
             var store = new CountingStore();

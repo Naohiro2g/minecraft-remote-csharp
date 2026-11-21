@@ -37,6 +37,7 @@ namespace Code2Create.MinecraftRemote.Client
 
     public sealed class ClientOptions
     {
+        private static readonly string LibraryVersion = typeof(MinecraftClient).Assembly.GetName().Version!.ToString(3);
         private static readonly string ProcessSession = Guid.NewGuid().ToString("N");
         public ClientOptions(string host, int port, ClientIdentity? identity = null, BuildContext? build = null,
             string? applicationId = null, string? sessionId = null, bool allowPairing = true, TimeSpan? pairingPollInterval = null, TimeSpan? responseIdleTimeout = null, bool autoReconnectEnabled = true,
@@ -53,7 +54,7 @@ namespace Code2Create.MinecraftRemote.Client
             KeepAliveRetryCount = keepAliveRetryCount;
             AutoReconnectEnabled = autoReconnectEnabled;
             Host = host; Port = port;
-            Identity = identity ?? new ClientIdentity("minecraft-remote-csharp", "development");
+            Identity = identity ?? new ClientIdentity("minecraft-remote-csharp", LibraryVersion);
             Build = build;
             AllowPairing = allowPairing;
             PairingPollInterval = pairingPollInterval ?? TimeSpan.FromSeconds(2);
