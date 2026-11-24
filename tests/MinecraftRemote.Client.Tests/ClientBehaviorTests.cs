@@ -23,7 +23,7 @@ namespace Code2Create.MinecraftRemote.Client.Tests
         [InlineData("F1-BL-05")]
         public async Task TypedBlockApiSendsPartialStateAndReturnsServerFullState(string id)
         {
-            var data = Find(id);
+            var data = FindCandidateCase(id);
             await using var peer = new ScriptedPeer(data);
             var options = Options(peer.Port, data); var store = new CountingStore();
             await SeedToken(data, options, store);
@@ -39,25 +39,62 @@ namespace Code2Create.MinecraftRemote.Client.Tests
         }
 
         [Theory]
-        [InlineData("F1-HE-11")]
-        [InlineData("F1-HE-12")]
-        public async Task IncompatibleHelloClosesBeforeAnyOtherRequestAndPreservesToken(string id)
+        [InlineData("23.2.1")]
+        [InlineData("23.3.0")]
+        [InlineData("25.0.0")]
+        public async Task IncompatibleHelloClosesBeforeAnyOtherRequestAndPreservesToken(string serverProtocol)
         {
-            var data = Find(id);
+            var data = CandidateHelloCase(serverProtocol);
             await using var peer = new ScriptedPeer(data);
-            var options = Options(peer.Port, data); var store = new CountingStore();
+            var options = new ClientOptions(IPAddress.Loopback.ToString(), peer.Port);
+            var store = new CountingStore();
             await SeedToken(data, options, store);
             var server = peer.RunAsync();
             var failure = await Assert.ThrowsAsync<ProtocolCompatibilityException>(() => MinecraftClient.ConnectAsync(options, store).WaitAsync(TimeSpan.FromSeconds(5)));
-            Assert.Equal("23.2.1", failure.ClientRequires);
+            Assert.Equal(serverProtocol, failure.ServerProtocol);
+            Assert.Equal("24.0.0", failure.ClientRequires);
             Assert.Equal(0, store.Deletes);
             await server.WaitAsync(TimeSpan.FromSeconds(5)); // EOFを検査し、追加requestが無いことも確かめる。
+        }
+
+        [Theory]
+        [InlineData("24.0.0")]
+        [InlineData("24.0.1")]
+        [InlineData("24.1.0")]
+        public async Task HelloAdvertisesCandidateProtocolAndLibraryVersion(string serverProtocol)
+        {
+            var data = CandidateHelloCase(serverProtocol);
+            await using var peer = new ScriptedPeer(data);
+            var options = new ClientOptions(IPAddress.Loopback.ToString(), peer.Port);
+            var store = new CountingStore();
+            await SeedToken(data, options, store);
+            var server = peer.RunAsync();
+            await using var client = await MinecraftClient.ConnectAsync(options, store).WaitAsync(TimeSpan.FromSeconds(5));
+            Assert.Equal(serverProtocol, client.Hello.Protocol);
+            await client.CloseAsync();
+            await server.WaitAsync(TimeSpan.FromSeconds(5));
+        }
+
+        private static JObject CandidateHelloCase(string serverProtocol)
+        {
+            var data = Find("F1-HE-11");
+            var steps = data["steps"]!;
+            var parameters = steps[1]!["message"]!["params"]!;
+            parameters["protocol"] = "24.0.0";
+            parameters["client"] = new JObject
+            {
+                ["name"] = "minecraft-remote-csharp",
+                ["version"] = "2400.0.0",
+                ["locale"] = "ja",
+            };
+            steps[2]!["message"]!["result"]!["protocol"] = serverProtocol;
+            return data;
         }
 
         [Fact]
         public async Task ClientDetectedPairingExpiryIsNotARemoteError()
         {
-            var data = Find("F1-AU-01"); var steps = (JArray)data["steps"]!;
+            var data = FindCandidateCase("F1-AU-01"); var steps = (JArray)data["steps"]!;
             while (steps.Count > 7) steps.RemoveAt(steps.Count - 1);
             steps[6]!["message"]!["result"]!["expires_in"] = 0;
             steps.Add(new JObject { ["op"] = "client_close" });
@@ -148,7 +185,7 @@ namespace Code2Create.MinecraftRemote.Client.Tests
         [Fact]
         public async Task PairingCanContinueWhenThePreAuthTcpClosesWhileHumanApproves()
         {
-            var data = Find("F1-AU-01"); var steps = (JArray)data["steps"]!;
+            var data = FindCandidateCase("F1-AU-01"); var steps = (JArray)data["steps"]!;
             for (int i = 7; i <= 11; i++)
                 if (steps[i]!["message"]?["id"] != null) steps[i]!["message"]!["id"] = (int)steps[i]!["message"]!["id"]! - 1;
             steps.Insert(7, new JObject { ["op"] = "peer_eof" });

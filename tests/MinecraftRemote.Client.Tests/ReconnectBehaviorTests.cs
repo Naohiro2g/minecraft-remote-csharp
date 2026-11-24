@@ -1,7 +1,12 @@
 using System;
+using System.IO;
 using System.Linq;
+using System.Net;
+using System.Net.Sockets;
+using System.Text;
 using System.Threading.Tasks;
 using Code2Create.MinecraftRemote.Client;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Xunit;
 using static Code2Create.MinecraftRemote.Client.Tests.BootstrapFixtureTests;
@@ -12,8 +17,8 @@ public sealed class ReconnectBehaviorTests
     [Fact]
     public async Task LostPollContinuesSamePairingThroughApprovalAndHello()
     {
-        var data=Find("F1-AU-12");var steps=(JArray)data["steps"]!;
-        var continuation=(JArray)Find("F1-AU-11")["steps"]!;
+        var data=FindCandidateCase("F1-AU-12");var steps=(JArray)data["steps"]!;
+        var continuation=(JArray)FindCandidateCase("F1-AU-11")["steps"]!;
         // AU-11 already describes a fresh poll TCP, pending, approval, ok, and token hello.
         foreach(var step in continuation.Skip(10))steps.Add(step.DeepClone());
         await using var peer=new ScriptedPeer(data);var server=peer.RunAsync();
@@ -29,7 +34,7 @@ public sealed class ReconnectBehaviorTests
     [Fact]
     public async Task RetryBackoffUsesInjectedJitterAndIncreasingWindows()
     {
-        var original=Find("F1-BL-01");var first=original["steps"]!.Take(3).Select(s=>s.DeepClone()).ToArray();
+        var original=FindCandidateCase("F1-BL-01");var first=original["steps"]!.Take(3).Select(s=>s.DeepClone()).ToArray();
         var steps=new JArray(first);steps.Add(new JObject{["op"]="peer_eof"});
         steps.Add(new JObject{["op"]="connect"});foreach(var step in first.Skip(1))steps.Add(step.DeepClone());
         foreach(var step in original["steps"]!.Skip(5))
@@ -73,10 +78,58 @@ public sealed class ReconnectBehaviorTests
         }
         finally{listener.Stop();}
     }
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task ResponseIdleTimeoutUsesLongestPendingLimit(bool completeLongRequest)
+    {
+        using var listener = new TcpListener(IPAddress.Loopback, 0);
+        listener.Start();
+        var clock = new ManualClock();
+        var options = new ClientOptions(IPAddress.Loopback.ToString(), ((IPEndPoint)listener.LocalEndpoint).Port)
+        {
+            Clock = clock,
+        };
+        var open = ProtocolSession.OpenAsync(options, new NoCredentialStore());
+        using var peer = await listener.AcceptTcpClientAsync().WaitAsync(TimeSpan.FromSeconds(5));
+        await using var session = await open;
+        var shortRequest = session.RequestAsync("world.getBlock", new JArray(0, 0, 0));
+        var longRequest = session.RequestAsync("world.getBlock", new JArray(1, 0, 0),
+            requestOptions: new RequestOptions(TimeSpan.FromMinutes(30)));
+        using var reader = new StreamReader(peer.GetStream());
+        Assert.NotNull(await reader.ReadLineAsync().WaitAsync(TimeSpan.FromSeconds(5)));
+        var longMessage = JObject.Parse((await reader.ReadLineAsync().WaitAsync(TimeSpan.FromSeconds(5)))!);
+
+        var nextWatch = clock.NextDelay;
+        clock.Advance(TimeSpan.FromMinutes(16));
+        Assert.Same(nextWatch, await Task.WhenAny(nextWatch, session.Closed).WaitAsync(TimeSpan.FromSeconds(5)));
+        Assert.True(session.IsOpen);
+        Assert.False(shortRequest.IsCompleted);
+        Assert.False(longRequest.IsCompleted);
+
+        if (completeLongRequest)
+        {
+            var response = new JObject { ["jsonrpc"] = "2.0", ["id"] = longMessage["id"], ["result"] = JValue.CreateNull() };
+            await Write(peer, Encoding.UTF8.GetBytes(response.ToString(Formatting.None) + "\n"));
+            await longRequest.WaitAsync(TimeSpan.FromSeconds(5));
+            Assert.False(shortRequest.IsCompleted);
+            clock.Advance(TimeSpan.FromMinutes(16));
+        }
+        else
+        {
+            clock.Advance(TimeSpan.FromMinutes(15));
+            await Assert.ThrowsAsync<CompletionUnknownException>(() => longRequest.WaitAsync(TimeSpan.FromSeconds(5)));
+        }
+
+        await Assert.ThrowsAsync<CompletionUnknownException>(() => shortRequest.WaitAsync(TimeSpan.FromSeconds(5)));
+        Assert.False(session.IsOpen);
+        Assert.Empty(session.PendingIds);
+    }
+
     [Fact]
     public async Task RemoteMismatchOnReconnectIsNotSentAndPreservesOriginalError()
     {
-        var original=Find("F1-BL-01");var first=original["steps"]!.Take(3).Select(s=>s.DeepClone()).ToArray();
+        var original=FindCandidateCase("F1-BL-01");var first=original["steps"]!.Take(3).Select(s=>s.DeepClone()).ToArray();
         var steps=new JArray(first);steps.Add(new JObject{["op"]="peer_eof"});steps.Add(new JObject{["op"]="connect"});
         steps.Add(first[1].DeepClone());
         steps.Add(Find("F1-HE-10")["steps"]!.Single(s=>(string)s["op"]! == "peer_send").DeepClone());
