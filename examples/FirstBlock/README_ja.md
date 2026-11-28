@@ -1,11 +1,11 @@
 # .NETコンソールで始める
 
 FirstBlockは、C#から1ブロックを置いて読み戻す作例です。このチェックアウトのライブラリを参照します。
-接続先にはprotocol `24.0.0`と互換性のあるMcRemoteまたはUnity箱庭を使います。
+接続先にはprotocol `24.0.0`と互換性のあるMcRemoteまたは.NET箱庭を使います。
 
 ## 準備と変更範囲
 
-リポジトリをVS Codeで開き、[開発を始める](../../README.md#開発を始める)の手順でmiseと.NET SDKを準備します。接続先でMcRemoteまたはUnity箱庭を起動します。
+リポジトリをVS Codeで開き、[開発を始める](../../README.md#開発を始める)の手順でmiseと.NET SDKを準備します。接続先でMcRemoteまたは.NET箱庭を起動します。
 必要なのはMinecraftのゲーム用ポートではなく、McRemoteのTCPポートです。
 
 実行すると、指定する位置の**実worldの1ブロックを金ブロックへ置換**します。playerだけに見える仮表示ではありません。
